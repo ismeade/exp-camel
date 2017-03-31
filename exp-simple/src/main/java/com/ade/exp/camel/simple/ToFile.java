@@ -4,7 +4,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
 
-import java.util.Date;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  *
@@ -13,20 +13,24 @@ import java.util.Date;
 public class ToFile {
 
     public static void main(String[] args) throws Exception {
-        CamelContext context = new DefaultCamelContext(); // 1. 创建 CamelContext.
+        CamelContext context = new DefaultCamelContext();
         context.addRoutes(new RouteBuilder() {
             public void configure() {
-                from("jetty:http://localhost:8012/toFile")
-                        .process(exchange -> exchange.getOut().setBody("53252353"))
+                from("jetty:http://localhost:8011/toFile")
+                        .process(exchange -> {
+                            HttpServletRequest req = exchange.getIn().getBody(HttpServletRequest.class);
+                            String str = req.getParameter("abc");
+                            System.out.println(str);
+                            exchange.getOut().setBody(str);
+                        })
                         .multicast() // 发给多个目标，没有这行只会顺序发，一个接收成功就会停止
-//                        .process(new ReviveProcess())
-                        .to("file://c:/logs?fileName=test.txt", "stream:out", "http4:localhost:8011/toLog"); // 2. 为路由配置组件或终端节点.
+                        .to("file://c:/logs?fileName=test.txt", "stream:out");
             }
-        }); // 3. 添加路由到CamelContext
+        });
         context.setTracing(true);
-        context.start(); // 4. 启动CamelContext.
-        Thread.sleep(Integer.MAX_VALUE);  // 为了保持CamelContext处于工作状态，这里需要sleep主线程
-        context.stop(); // 最后停止CamelContext
+        context.start();
+        Thread.sleep(Integer.MAX_VALUE);
+        context.stop();
     }
 
 }
