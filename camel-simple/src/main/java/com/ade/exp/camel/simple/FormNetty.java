@@ -19,7 +19,7 @@ public class FormNetty {
                         .process(exchange -> {
                             Object obj = exchange.getIn().getHeader("CamelNettyChannelHandlerContext");
                             ChannelHandlerContext channelHandlerContext = (ChannelHandlerContext) obj;
-//                            channelHandlerContext.
+//                            channelHandlerContext.channel().
                             System.out.println(channelHandlerContext.name());
                             System.out.println(channelHandlerContext.handler());
                             channelHandlerContext.writeAndFlush("test\n");
