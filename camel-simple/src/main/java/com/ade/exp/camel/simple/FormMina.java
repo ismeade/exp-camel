@@ -20,8 +20,8 @@ public class FormMina {
                 from("mina:tcp://localhost:8999?textline=true&sync=true")
                         .process(exchange -> {
                             System.out.println(exchange.getIn().getHeaders());
-                            Object sess = exchange.getIn().getHeader("CamelMinaIoSession");
-                            IoSession session = (IoSession) sess;
+                            Object obj= exchange.getIn().getHeader("CamelMinaIoSession");
+                            IoSession session = (IoSession) obj;
                             session.write("test");
                             String str = exchange.getIn().getBody(String.class);
                             System.out.println("=== " + str + " ===");

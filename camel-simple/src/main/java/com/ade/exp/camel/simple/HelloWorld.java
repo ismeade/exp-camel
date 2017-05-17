@@ -1,6 +1,5 @@
 package com.ade.exp.camel.simple;
 
-import com.sun.org.apache.xpath.internal.SourceTree;
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
