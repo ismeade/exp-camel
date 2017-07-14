@@ -1,10 +1,8 @@
 package com.ade.exp.camel.simple;
 
+import com.ade.exp.camel.route.HelloWorldRoute;
 import org.apache.camel.CamelContext;
-import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
-
-import java.util.Date;
 
 /**
  *
@@ -14,19 +12,7 @@ public class HelloWorld {
 
     public static void main(String[] args) throws Exception {
         CamelContext context = new DefaultCamelContext();
-        context.addRoutes(new RouteBuilder() {
-            public void configure() {
-                from("timer://foo?fixedRate=true&period=1000")
-                        .process(exchange -> exchange.getOut().setBody(new Date()))
-//                        .choice()
-//                        .when(header("a").isEqualTo("123"))
-//                        .to()
-//                        .otherwise()
-//                        .to()
-//                        .endChoice()
-                        .to("stream:out");
-            }
-        });
+        context.addRoutes(new HelloWorldRoute());
         context.setTracing(true);
         context.start();
         Thread.sleep(Integer.MAX_VALUE);

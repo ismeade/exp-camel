@@ -13,6 +13,8 @@ public class HelloWorld {
 
         ApplicationContext context = new ClassPathXmlApplicationContext("application-config.xml");
 
+        System.out.println(context.getBean("defineProcessor"));
+
         synchronized (HelloWorld.class) {
             HelloWorld.class.wait();
         }

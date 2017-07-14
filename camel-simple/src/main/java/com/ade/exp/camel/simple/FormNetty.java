@@ -1,7 +1,9 @@
 package com.ade.exp.camel.simple;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
@@ -11,8 +13,13 @@ import io.netty.util.CharsetUtil;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Message;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.netty4.NettyConsumer;
+import org.apache.camel.component.netty4.ServerInitializerFactory;
+import org.apache.camel.component.netty4.http.NettyChannelBufferStreamCache;
 import org.apache.camel.impl.DefaultCamelContext;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -23,46 +30,48 @@ public class FormNetty {
 
     public static void main(String[] args) throws Exception {
         CamelContext context = new DefaultCamelContext();
-        context.addRoutes(new RouteBuilder() {
-            public void configure() {
-                from("netty4:tcp://localhost:8999?textline=true")
-//                from("netty4:tcp://localhost:8999")
-                        .process(
-                                exchange -> {
-                                    Object obj = exchange.getIn().getHeader("CamelNettyChannelHandlerContext");
-                                    ChannelHandlerContext channelHandlerContext = (ChannelHandlerContext) obj;
-                                    System.out.println("hashCode [" + channelHandlerContext.hashCode() + "]");
-                                    channelHandlerContext.pipeline()
-                                            .addLast(new LineBasedFrameDecoder(1024))
-                                            .addLast("idle", new IdleStateHandler(12, 12, 20, TimeUnit.SECONDS))
-                                            .addLast(new StringDecoder(CharsetUtil.UTF_8))
-                                            .addLast(new StringEncoder(CharsetUtil.UTF_8))
-                                            .addLast(new NettyServerHandler());
-
-                                    String str = exchange.getIn().getBody(String.class);
-                                    System.out.println("== " + str + " ==");
-                                    if (null != str) {
-                                        switch (str) {
-                                            case "exit":
-                                            case "quit":
-                                                channelHandlerContext.disconnect();
-                                                break;
-                                            default:
-                                                channelHandlerContext.writeAndFlush("command [" + str + "]\n");
-                                        }
-                                    }
-//                                    exchange.getOut().setBody("response");
-                                }
-                        )
-//                        .choice()
-//                        .when(exchange -> false)
-//                        .to("direct:start")
-//                        .otherwise()
-//                        .to()
-//                        .endChoice()
-                ;
-            }
-        });
+//        context.getRegistry().lookupByNameAndType("factory", SampleServerInitializerFactory.class);
+//        System.out.println(context.getRegistry().getClass());
+//        context.addRoutes(new RouteBuilder() {
+//            public void configure() {
+//                from("netty4:tcp://localhost:8999?textline=true&serverInitializerFactory=#factory")
+////                from("netty4:tcp://localhost:8999")
+//                        .process(
+//                                exchange -> {
+//                                    Object obj = exchange.getIn().getHeader("CamelNettyChannelHandlerContext");
+//                                    ChannelHandlerContext channelHandlerContext = (ChannelHandlerContext) obj;
+////                                    System.out.println("hashCode [" + channelHandlerContext.hashCode() + "]");
+////                                    channelHandlerContext.pipeline()
+////                                            .addLast(new LineBasedFrameDecoder(1024))
+////                                            .addLast(new IdleStateHandler(12, 12, 20, TimeUnit.SECONDS))
+////                                            .addLast(new StringDecoder(CharsetUtil.UTF_8))
+////                                            .addLast(new StringEncoder(CharsetUtil.UTF_8))
+////                                            .addLast(new NettyServerHandler());
+//
+//                                    String str = exchange.getIn().getBody(String.class);
+//                                    System.out.println("== " + str + " ==");
+//                                    if (null != str) {
+//                                        switch (str) {
+//                                            case "exit":
+//                                            case "quit":
+//                                                channelHandlerContext.disconnect();
+//                                                break;
+//                                            default:
+//                                                channelHandlerContext.writeAndFlush("command [" + str + "]\n");
+//                                        }
+//                                    }
+////                                    exchange.getOut().setBody("response");
+//                                }
+//                        )
+////                        .choice()
+////                        .when(exchange -> false)
+////                        .to("direct:start")
+////                        .otherwise()
+////                        .to()
+////                        .endChoice()
+//                ;
+//            }
+//        });
         context.addRoutes(new RouteBuilder() {
             public void configure() {
                 from("netty4-http:http://localhost:8998")
@@ -73,11 +82,17 @@ public class FormNetty {
                                     System.out.println(message.getHeader("CamelHttpUri"));
                                     System.out.println(message.getHeader("CamelHttpUrl"));
 
+                                    System.out.println(message.getHeaders());
+
 //                                    ChannelHandlerContext channelHandlerContext = (ChannelHandlerContext) message.getHeader("CamelNettyChannelHandlerContext");
 //                                    channelHandlerContext.disconnect();
 
-//                                    NettyChannelBufferStreamCache cache = (NettyChannelBufferStreamCache) message.getBody();
-//                                    cache.writeTo(System.out);
+                                    NettyChannelBufferStreamCache cache = (NettyChannelBufferStreamCache) message.getBody();
+                                    System.out.println("---");
+                                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                                    cache.writeTo(outputStream);
+                                    System.out.println(outputStream.toString("UTF-8"));
+                                    System.out.println("---");
 //                                    exchange.getOut().setBody("response");
                                 }
                         )
@@ -114,6 +129,25 @@ public class FormNetty {
 //        }
 //
 //    }
+
+    private static class SampleServerInitializerFactory extends ServerInitializerFactory {
+
+        protected void initChannel(Channel ch) throws Exception {
+            ch.pipeline()
+                    .addLast(new LineBasedFrameDecoder(1024))
+                    .addLast(new IdleStateHandler(12, 12, 20, TimeUnit.SECONDS))
+                    .addLast(new StringDecoder(CharsetUtil.UTF_8))
+                    .addLast(new StringEncoder(CharsetUtil.UTF_8))
+                    .addLast(new NettyServerHandler())
+            ;
+
+        }
+
+        @Override
+        public ServerInitializerFactory createPipelineFactory(NettyConsumer nettyConsumer) {
+            return null;
+        }
+    }
 
     private static class NettyServerHandler extends ChannelInboundHandlerAdapter {
 
